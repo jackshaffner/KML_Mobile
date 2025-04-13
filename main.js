@@ -32,436 +32,493 @@ let legendGradientElement = null;
 let legendLabelsElement = null;
 let trackPopupElement = null;
 
-// Touch detection
-const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
-  initializeViewer();
-  setupEventListeners();
+  // Initialize UI elements first
   initializeUI();
-  createTrackPopup();
+  
+  // Then initialize the viewer (with a slight delay to ensure DOM is ready)
+  setTimeout(() => {
+    try {
+      initializeViewer();
+      setupEventListeners();
+      createTrackPopup();
+      console.log('Viewer initialized successfully');
+    } catch (error) {
+      console.error('Error initializing viewer:', error);
+      // Show error message to user
+      showErrorMessage('Failed to initialize map viewer. Please check your internet connection and try again.');
+    }
+  }, 100);
 });
+
+// Show error message to user
+function showErrorMessage(message) {
+  const errorDiv = document.createElement('div');
+  errorDiv.style.position = 'absolute';
+  errorDiv.style.top = '50%';
+  errorDiv.style.left = '50%';
+  errorDiv.style.transform = 'translate(-50%, -50%)';
+  errorDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+  errorDiv.style.color = 'white';
+  errorDiv.style.padding = '20px';
+  errorDiv.style.borderRadius = '5px';
+  errorDiv.style.zIndex = '9999';
+  errorDiv.style.maxWidth = '80%';
+  errorDiv.style.textAlign = 'center';
+  errorDiv.innerHTML = message;
+  document.body.appendChild(errorDiv);
+  
+  // Add a close button
+  const closeButton = document.createElement('button');
+  closeButton.textContent = 'Close';
+  closeButton.style.marginTop = '10px';
+  closeButton.style.padding = '5px 10px';
+  closeButton.style.backgroundColor = 'white';
+  closeButton.style.color = 'red';
+  closeButton.style.border = 'none';
+  closeButton.style.borderRadius = '3px';
+  closeButton.style.cursor = 'pointer';
+  closeButton.onclick = function() {
+    document.body.removeChild(errorDiv);
+  };
+  errorDiv.appendChild(closeButton);
+}
 
 // Initialize Cesium viewer
 function initializeViewer() {
-  Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyOGI0NzRjZC04MWMyLTRiYmEtOTdkZS05MmM2YTNlOTkwODciLCJpZCI6MjkzMDE4LCJpYXQiOjE3NDQzMzg4Mjh9.goakCTnXpFoxeFNE0DBWyChHYW9nKrXOVPaNY5UjJAo';
+  try {
+    // Ensure token is set
+    if (!Cesium.Ion.defaultAccessToken) {
+      console.log('Setting token in initializeViewer');
+      Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyOGI0NzRjZC04MWMyLTRiYmEtOTdkZS05MmM2YTNlOTkwODciLCJpZCI6MjkzMDE4LCJpYXQiOjE3NDQzMzg4Mjh9.goakCTnXpFoxeFNE0DBWyChHYW9nKrXOVPaNY5UjJAo';
+    }
 
-  viewer = new Cesium.Viewer('cesiumContainer', {
-    terrainProvider: Cesium.createWorldTerrain(),
-    animation: false,
-    baseLayerPicker: false,
-    fullscreenButton: false,
-    geocoder: false,
-    homeButton: false,
-    infoBox: false,
-    sceneModePicker: false,
-    selectionIndicator: false,
-    timeline: false,
-    navigationHelpButton: false,
-    navigationInstructionsInitiallyVisible: false,
-    scene3DOnly: true,
-    creditContainer: document.createElement('div'), // Hide credits
-    orderIndependentTranslucency: false, // Better performance
-    contextOptions: {
-      webgl: {
-        alpha: true,
-        antialias: true,
-        preserveDrawingBuffer: true,
-        failIfMajorPerformanceCaveat: false,
-        depth: true,
-        stencil: false
+    // Check if container exists
+    const container = document.getElementById('cesiumContainer');
+    if (!container) {
+      console.error('Cesium container not found');
+      return;
+    }
+    
+    // Create viewer with error handling
+    viewer = new Cesium.Viewer('cesiumContainer', {
+      terrainProvider: Cesium.createWorldTerrain(),
+      animation: false,
+      baseLayerPicker: false,
+      fullscreenButton: false,
+      geocoder: false,
+      homeButton: false,
+      infoBox: false,
+      sceneModePicker: false,
+      selectionIndicator: false,
+      timeline: false,
+      navigationHelpButton: false,
+      navigationInstructionsInitiallyVisible: false,
+      scene3DOnly: true,
+      creditContainer: document.createElement('div'), // Hide credits
+      orderIndependentTranslucency: false, // Better performance
+      contextOptions: {
+        webgl: {
+          alpha: true,
+          antialias: true,
+          preserveDrawingBuffer: true,
+          failIfMajorPerformanceCaveat: false,
+          depth: true,
+          stencil: false
+        }
+      },
+      sceneMode: Cesium.SceneMode.SCENE3D,
+      shadows: false,
+      showRenderLoopErrors: true,
+      targetFrameRate: 60
+    });
+
+    // Configure viewer
+    viewer.scene.globe.depthTestAgainstTerrain = true;
+    viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
+    
+    // Hide Cesium branding
+    hideViewerBranding();
+    
+    // Initialize animation and flags with references
+    if (typeof initAnimationAndFlags === 'function') {
+      initAnimationAndFlags({
+        viewer,
+        kmlDataList,
+        settings,
+        fileInfo: fileInfoElement,
+      });
+    } else {
+      console.error('initAnimationAndFlags function not found');
+    }
+    
+    // Setup track segment hover/touch handler
+    setupTrackInteractionHandler();
+    
+    // Set initial camera position
+    setDefaultCameraPosition();
+    
+    console.log('Viewer setup complete');
+  } catch (error) {
+    console.error('Error in initializeViewer:', error);
+    showErrorMessage('Error initializing map: ' + error.message);
+  }
+}
+
+// Hide Cesium branding elements
+function hideViewerBranding() {
+  try {
+    // Remove Cesium logo and credits
+    const creditContainer = document.querySelector('.cesium-widget-credits');
+    if (creditContainer) {
+      creditContainer.style.display = 'none';
+    }
+    
+    // Remove other Cesium UI elements
+    const selectors = [
+      '.cesium-viewer-bottom',
+      '.cesium-viewer-timelineContainer',
+      '.cesium-viewer-animationContainer',
+      '.cesium-viewer-fullscreenContainer',
+      '.cesium-viewer-toolbar',
+      '.cesium-widget-credits',
+      '.cesium-credit-container',
+      '.cesium-credit-logoContainer',
+      '.cesium-credit-expand-link',
+      '.cesium-widget-errorPanel',
+      '.cesium-infoBox-container'
+    ];
+    
+    selectors.forEach(selector => {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.style.display = 'none';
       }
-    },
-    sceneMode: Cesium.SceneMode.SCENE3D,
-    shadows: false,
-    showRenderLoopErrors: false,
-    targetFrameRate: 60
-  });
+    });
+  } catch (error) {
+    console.error('Error hiding viewer branding:', error);
+  }
+}
 
-  viewer.scene.globe.depthTestAgainstTerrain = true;
-  viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
-  
-  // Remove Cesium logo, watermarks, etc. (omitted for brevity)...
-
-  // Initialize animation and flags with references
-  initAnimationAndFlags({
-    viewer,
-    kmlDataList,
-    settings,
-    fileInfo: fileInfoElement,
-  });
-  
-  // Setup track segment hover/touch handler
-  setupTrackInteractionHandler();
+// Set default camera position
+function setDefaultCameraPosition() {
+  if (viewer && viewer.camera) {
+    viewer.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(-95.0, 40.0, 10000000.0)
+    });
+  }
 }
 
 // Set up event listeners for UI controls
 function setupEventListeners() {
-  // File controls
-  document.getElementById('loadKmlBtn').addEventListener('click', handleFileLoad);
-  document.getElementById('interpolateDataBtn').addEventListener('click', handleInterpolateData);
-  
-  // View controls
-  document.getElementById('resetView').addEventListener('click', resetView);
-  document.getElementById('topDownView').addEventListener('click', topDownView);
-  document.getElementById('showAllBtn').addEventListener('click', showAllTracks);
-
-  // [FIX] Ensure resetFlagsBtn calls resetAllFlags so gates fully reset
-  document.getElementById('resetFlagsBtn').addEventListener('click', resetAllFlags);
-
-  // Color mode controls
-  document.getElementById('noColorRadio').addEventListener('change', updateColorMode);
-  document.getElementById('speedRadio').addEventListener('change', updateColorMode);
-  document.getElementById('accelRadio').addEventListener('change', updateColorMode);
-  document.getElementById('timeDiffRadio').addEventListener('change', updateColorMode);
-  document.getElementById('lostTimeRadio').addEventListener('change', updateColorMode);
-  document.getElementById('continuousColors').addEventListener('change', updateColorMode);
-  document.getElementById('unitToggle').addEventListener('change', toggleUnits);
-  
-  // Animation controls
-  document.getElementById('playAnimation').addEventListener('click', startAnimation);
-  document.getElementById('pauseAnimation').addEventListener('click', stopAnimation);
-  document.getElementById('resetToSyncPoint').addEventListener('click', resetAnimation);
-  
-  // Add both input and change events for sliders to ensure they work on touch devices
-  document.getElementById('speedSlider').addEventListener('input', updateAnimationSpeed);
-  document.getElementById('speedSlider').addEventListener('change', updateAnimationSpeed);
-  document.getElementById('timelineSlider').addEventListener('input', updateTimelinePosition);
-  document.getElementById('timelineSlider').addEventListener('change', updateTimelinePosition);
-  
-  // Flag controls - add both click and touch events
-  const startPointIcon = document.getElementById('startPointIcon');
-  const finishPointIcon = document.getElementById('finishPointIcon');
-  
-  startPointIcon.addEventListener('click', () => placeFlag(true));
-  finishPointIcon.addEventListener('click', () => placeFlag(false));
-  
-  // Add touch events for flags
-  if (isTouchDevice) {
-    startPointIcon.addEventListener('touchstart', (e) => {
-      e.preventDefault(); // Prevent default touch behavior
-      placeFlag(true);
+  try {
+    // Load KML button
+    const loadKmlBtn = document.getElementById('loadKmlBtn');
+    if (loadKmlBtn) {
+      loadKmlBtn.addEventListener('click', () => {
+        // Create a file input element
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.multiple = true;
+        fileInput.accept = '.kml,.kmz';
+        
+        // Trigger click on the file input
+        fileInput.click();
+        
+        // Handle file selection
+        fileInput.addEventListener('change', (event) => {
+          const files = event.target.files;
+          if (files.length > 0) {
+            handleKmlFiles(files);
+          }
+        });
+      });
+    }
+    
+    // Interpolate data button
+    const interpolateDataBtn = document.getElementById('interpolateDataBtn');
+    if (interpolateDataBtn) {
+      interpolateDataBtn.addEventListener('click', () => {
+        interpolateTrackData();
+      });
+    }
+    
+    // Reset view button
+    const resetViewBtn = document.getElementById('resetView');
+    if (resetViewBtn) {
+      resetViewBtn.addEventListener('click', () => {
+        resetView();
+      });
+    }
+    
+    // Top down view button
+    const topDownViewBtn = document.getElementById('topDownView');
+    if (topDownViewBtn) {
+      topDownViewBtn.addEventListener('click', () => {
+        setTopDownView();
+      });
+    }
+    
+    // Show all button
+    const showAllBtn = document.getElementById('showAllBtn');
+    if (showAllBtn) {
+      showAllBtn.addEventListener('click', () => {
+        showAllTracks();
+      });
+    }
+    
+    // Color mode radio buttons
+    const colorModeRadios = document.querySelectorAll('input[name="colorMode"]');
+    colorModeRadios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        if (radio.checked) {
+          settings.colorMode = radio.value;
+          updateTrackColors();
+        }
+      });
     });
     
-    finishPointIcon.addEventListener('touchstart', (e) => {
-      e.preventDefault(); // Prevent default touch behavior
-      placeFlag(false);
-    });
+    // Continuous colors checkbox
+    const continuousColorsCheckbox = document.getElementById('continuousColors');
+    if (continuousColorsCheckbox) {
+      continuousColorsCheckbox.addEventListener('change', () => {
+        settings.continuousColors = continuousColorsCheckbox.checked;
+        updateTrackColors();
+      });
+    }
+    
+    // Unit toggle
+    const unitToggle = document.getElementById('unitToggle');
+    if (unitToggle) {
+      unitToggle.addEventListener('change', () => {
+        settings.speedUnits = unitToggle.checked ? 'kph' : 'mph';
+        updateUnitLabel();
+        updateTrackColors();
+      });
+    }
+    
+    // Animation controls
+    setupAnimationControls();
+    
+    console.log('Event listeners set up successfully');
+  } catch (error) {
+    console.error('Error setting up event listeners:', error);
   }
-  
-  // Initialize flag drag/drop with touch support
-  initFlagDragDrop();
 }
 
 // Initialize UI elements
 function initializeUI() {
-  fileInfoElement = document.getElementById('fileInfo');
-  progressBarElement = document.getElementById('progressBar');
-  progressBarFillElement = document.getElementById('progressBarFill');
-  trackTogglesElement = document.getElementById('trackToggles');
-  timelineSliderElement = document.getElementById('timelineSlider');
-  startTimeLabel = document.getElementById('start-time-label');
-  endTimeLabel = document.getElementById('end-time-label');
-  currentTimeLabel = document.getElementById('current-time-label');
-  speedValueElement = document.getElementById('speedValue');
-  speedSliderElement = document.getElementById('speedSlider');
-  unitToggleElement = document.getElementById('unitToggle');
-  unitLabelElement = document.getElementById('unitLabel');
-  legendGradientElement = document.getElementById('legendGradient');
-  legendLabelsElement = document.getElementById('legendLabels');
-  
-  updateLegend();
+  try {
+    // Get references to DOM elements
+    fileInfoElement = document.getElementById('fileInfo');
+    progressBarElement = document.getElementById('progressBar');
+    progressBarFillElement = document.getElementById('progressBarFill');
+    trackTogglesElement = document.getElementById('trackToggles');
+    timelineSliderElement = document.getElementById('timelineSlider');
+    startTimeLabel = document.getElementById('start-time-label');
+    endTimeLabel = document.getElementById('end-time-label');
+    currentTimeLabel = document.getElementById('current-time-label');
+    speedValueElement = document.getElementById('speedValue');
+    speedSliderElement = document.getElementById('speedSlider');
+    unitToggleElement = document.getElementById('unitToggle');
+    unitLabelElement = document.getElementById('unitLabel');
+    legendGradientElement = document.getElementById('legendGradient');
+    legendLabelsElement = document.getElementById('legendLabels');
+    
+    // Initialize legend
+    updateLegend();
+    
+    // Initialize unit label
+    updateUnitLabel();
+    
+    console.log('UI initialized successfully');
+  } catch (error) {
+    console.error('Error initializing UI:', error);
+  }
+}
+
+// Update unit label based on current setting
+function updateUnitLabel() {
+  if (unitLabelElement) {
+    unitLabelElement.textContent = settings.speedUnits === 'mph' ? 'MPH' : 'KPH';
+  }
 }
 
 // Create track popup element
 function createTrackPopup() {
-  const existingPopup = document.getElementById('trackPopup');
-  if (existingPopup) {
-    document.body.removeChild(existingPopup);
+  try {
+    // Create popup element if it doesn't exist
+    if (!trackPopupElement) {
+      trackPopupElement = document.createElement('div');
+      trackPopupElement.className = 'track-popup';
+      document.body.appendChild(trackPopupElement);
+      
+      // For touch devices, add a close button
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        const closeButton = document.createElement('button');
+        closeButton.className = 'popup-close-button';
+        closeButton.textContent = 'Close';
+        closeButton.addEventListener('click', () => {
+          hideTrackPopup();
+        });
+        trackPopupElement.appendChild(closeButton);
+      }
+    }
+    
+    console.log('Track popup created');
+  } catch (error) {
+    console.error('Error creating track popup:', error);
   }
-  
-  trackPopupElement = document.createElement('div');
-  trackPopupElement.id = 'trackPopup';
-  trackPopupElement.className = 'track-popup';
-  
-  const title = document.createElement('div');
-  title.className = 'track-popup-title';
-  
-  const content = document.createElement('div');
-  content.className = 'track-popup-content';
-  
-  trackPopupElement.appendChild(title);
-  trackPopupElement.appendChild(content);
-  
-  document.body.appendChild(trackPopupElement);
 }
 
-// Setup track segment interaction handler (supports both mouse and touch)
+// Setup track interaction handler (hover/touch)
 function setupTrackInteractionHandler() {
-  if (!viewer) return;
+  if (!viewer) {
+    console.error('Viewer not initialized for track interaction handler');
+    return;
+  }
   
-  const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-  
-  let hoverTimeout = null;
-  let isHovering = false;
-  let lastTapPosition = null;
-  
-  // Mouse move handler for desktop
-  handler.setInputAction(function(movement) {
-    handleTrackInteraction(movement.endPosition);
-  }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-  
-  // Mouse out handler for desktop
-  handler.setInputAction(function() {
-    clearTrackInteraction();
-  }, Cesium.ScreenSpaceEventType.MOUSE_OUT);
-  
-  // Touch move handler for tablets
-  if (isTouchDevice) {
+  try {
+    // Use appropriate event based on device type
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const eventType = isTouchDevice ? Cesium.ScreenSpaceEventType.LEFT_CLICK : Cesium.ScreenSpaceEventType.MOUSE_MOVE;
+    
+    // Create event handler
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    
+    // Add event listener
     handler.setInputAction(function(movement) {
-      // For touch move, use the position of the first touch point
-      if (movement.position) {
-        handleTrackInteraction(movement.position);
-      }
-    }, Cesium.ScreenSpaceEventType.TOUCH_MOVE);
-    
-    // Touch end handler for tablets
-    handler.setInputAction(function() {
-      clearTrackInteraction();
-    }, Cesium.ScreenSpaceEventType.TOUCH_END);
-    
-    // Single tap handler for tablets - show popup on tap
-    handler.setInputAction(function(tap) {
-      lastTapPosition = tap.position;
-      const pickedObject = viewer.scene.pick(tap.position);
+      const pickedObject = viewer.scene.pick(movement.endPosition || movement.position);
       
-      if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.polyline) {
-        const cartesian = viewer.scene.pickPosition(tap.position);
-        if (cartesian) {
-          showTrackPopupAtPosition(tap.position, cartesian);
-          
-          // Auto-hide popup after 3 seconds
-          setTimeout(() => {
-            hideTrackPopup();
-          }, 3000);
+      if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.trackData) {
+        // Show popup with track data
+        showTrackPopup(pickedObject.id.trackData, movement);
+      } else {
+        // Hide popup when not hovering over a track
+        hideTrackPopup();
+      }
+    }, eventType);
+    
+    // For touch devices, add a handler to hide popup when touching elsewhere
+    if (isTouchDevice) {
+      handler.setInputAction(function(movement) {
+        const pickedObject = viewer.scene.pick(movement.position);
+        
+        if (!Cesium.defined(pickedObject) || !pickedObject.id || !pickedObject.id.trackData) {
+          hideTrackPopup();
         }
-      }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-  }
-  
-  // Common function to handle track interaction
-  function handleTrackInteraction(position) {
-    const pickedObject = viewer.scene.pick(position);
-    
-    if (hoverTimeout) {
-      clearTimeout(hoverTimeout);
-      hoverTimeout = null;
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
     }
     
-    if (!Cesium.defined(pickedObject) || !(pickedObject.id && pickedObject.id.polyline)) {
-      hideTrackPopup();
-      isHovering = false;
-      return;
+    // For mouse devices, add a mouse out handler
+    if (!isTouchDevice) {
+      handler.setInputAction(function() {
+        hideTrackPopup();
+      }, Cesium.ScreenSpaceEventType.MOUSE_OUT);
     }
     
-    hoverTimeout = setTimeout(() => {
-      const cartesian = viewer.scene.pickPosition(position);
-      
-      if (cartesian) {
-        showTrackPopupAtPosition(position, cartesian);
-        isHovering = true;
-      }
-    }, 200);
-  }
-  
-  // Common function to clear track interaction
-  function clearTrackInteraction() {
-    if (hoverTimeout) {
-      clearTimeout(hoverTimeout);
-      hoverTimeout = null;
-    }
-    
-    // Don't hide popup immediately on touch devices if it was shown by a tap
-    if (!isTouchDevice || !lastTapPosition) {
-      hideTrackPopup();
-    }
-    
-    isHovering = false;
+    console.log('Track interaction handler set up');
+  } catch (error) {
+    console.error('Error setting up track interaction handler:', error);
   }
 }
 
-// Show track popup at the specified position
-function showTrackPopupAtPosition(screenPosition, cartesian) {
-  if (!trackPopupElement || !cartesian) return;
-  
-  const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-  const longitude = Cesium.Math.toDegrees(cartographic.longitude);
-  const latitude = Cesium.Math.toDegrees(cartographic.latitude);
-  const height = cartographic.height;
-  
-  const trackData = [];
-  
-  for (let i = 0; i < kmlDataList.length; i++) {
-    const kd = kmlDataList[i];
-    if (!kd.visible) continue;
-    
-    const closestPointIndex = kd.findClosestPoint(cartesian);
-    if (closestPointIndex < 0) continue;
-    
-    let value = 0;
-    let unit = '';
-    
-    if (settings.colorMode === 'speed') {
-      value = kd.getSpeedInUnits(kd.speeds[closestPointIndex], settings.speedUnits);
-      unit = settings.speedUnits === 'mph' ? 'mph' : 'kph';
-    } else if (settings.colorMode === 'acceleration') {
-      value = kd.accelerations[closestPointIndex];
-      unit = 'm/s²';
-    } else if (settings.colorMode === 'timeDifference' || settings.colorMode === 'lostTime') {
-      let refTrackIdx = 0;
-      if (typeof flagsState !== 'undefined' && flagsState.startTrackIndex >= 0 && 
-          flagsState.startTrackIndex < kmlDataList.length) {
-        refTrackIdx = flagsState.startTrackIndex;
-      } else {
-        let maxPoints = 0;
-        for (let j = 0; j < kmlDataList.length; j++) {
-          if (kmlDataList[j].visible && kmlDataList[j].timestamps.length > maxPoints) {
-            maxPoints = kmlDataList[j].timestamps.length;
-            refTrackIdx = j;
-          }
-        }
-      }
-      
-      if (i === refTrackIdx) {
-        value = 0;
-      } else {
-        const refTrack = kmlDataList[refTrackIdx];
-        if (settings.colorMode === 'timeDifference') {
-          if (kd.syncedTimestamps && kd.syncedTimestamps.length > closestPointIndex &&
-              refTrack.syncedTimestamps && refTrack.syncedTimestamps.length > closestPointIndex) {
-            const trackTime = kd.syncedTimestamps[closestPointIndex].time.getTime();
-            const refTime = refTrack.syncedTimestamps[closestPointIndex].time.getTime();
-            value = Math.abs((trackTime - refTime) / 1000);
-          }
-        } else if (settings.colorMode === 'lostTime') {
-          if (track.lostTimeDerivatives && j < track.lostTimeDerivatives.length) {
-			value = track.lostTimeDerivatives[j];
-		  } else {
-			// Fallback to absolute difference if derivatives not available
-			const trackTime = pt.time.getTime();
-			const refTime = refTrack.syncedTimestamps[closestIdx].time.getTime();
-			value = (trackTime - refTime) / 1000;
-		  }
-        }
-      }
-      
-      unit = 's';
-    }
-    
-    let color;
-    if (settings.colorMode === 'noColor') {
-      color = kd.color;
-    } else {
-      const colorScale = colorScales[settings.colorMode];
-      if (colorScale) {
-        const normalizedValue = (value - settings.legendMin) / (settings.legendMax - settings.legendMin);
-        const clampedValue = Math.max(0, Math.min(1, normalizedValue));
-        color = interpolateColor(colorScale, clampedValue);
-      } else {
-        color = kd.color;
-      }
-    }
-    
-    trackData.push({
-      name: kd.name || `Track ${i + 1}`,
-      value: value,
-      unit: unit,
-      color: color
-    });
-  }
-  
-  updateTrackPopupContent(trackData, settings.colorMode);
-  
-  // Position popup - adjust for touch to ensure it's not under the finger
-  if (isTouchDevice) {
-    // Position popup above the touch point on touch devices
-    trackPopupElement.style.left = (screenPosition.x - 125) + 'px'; // Center horizontally
-    trackPopupElement.style.top = (screenPosition.y - 150) + 'px'; // Position above finger
-  } else {
-    // Original positioning for mouse
-    trackPopupElement.style.left = (screenPosition.x + 15) + 'px';
-    trackPopupElement.style.top = (screenPosition.y + 15) + 'px';
-  }
-  
-  trackPopupElement.style.display = 'block';
-}
-
-// Update track popup content
-function updateTrackPopupContent(trackData, colorMode) {
+// Show track popup with data
+function showTrackPopup(trackData, movement) {
   if (!trackPopupElement) return;
   
-  const title = trackPopupElement.querySelector('.track-popup-title');
-  const content = trackPopupElement.querySelector('.track-popup-content');
-  
-  let titleText = 'Track Data';
-  switch (colorMode) {
-    case 'speed':
-      titleText = `Speed (${settings.speedUnits === 'mph' ? 'MPH' : 'KPH'})`;
-      break;
-    case 'acceleration':
-      titleText = 'Acceleration (m/s²)';
-      break;
-    case 'timeDifference':
-      titleText = 'Time Difference (s)';
-      break;
-    case 'lostTime':
-      titleText = 'Lost Time (s)';
-      break;
-    case 'noColor':
-      titleText = 'Track Information';
-      break;
-  }
-  title.textContent = titleText;
-  
-  content.innerHTML = '';
-  
-  if (trackData.length === 0) {
-    const noData = document.createElement('div');
-    noData.textContent = 'No track data available';
-    content.appendChild(noData);
-  } else {
-    trackData.forEach(track => {
-      const item = document.createElement('div');
-      item.className = 'track-popup-item';
-      
-      const colorBox = document.createElement('div');
-      colorBox.className = 'track-popup-color';
-      colorBox.style.backgroundColor = track.color.toCssColorString();
-      
-      const name = document.createElement('div');
-      name.className = 'track-popup-name';
-      name.textContent = track.name;
-      
-      const value = document.createElement('div');
-      value.className = 'track-popup-value';
-      value.textContent = `${track.value.toFixed(2)} ${track.unit}`;
-      
-      item.appendChild(colorBox);
-      item.appendChild(name);
-      item.appendChild(value);
-      
-      content.appendChild(item);
-    });
-  }
-  
-  // Add close button for touch devices
-  if (isTouchDevice) {
-    const closeButton = document.createElement('button');
-    closeButton.textContent = 'Close';
-    closeButton.className = 'popup-close-button';
-    closeButton.addEventListener('click', hideTrackPopup);
-    content.appendChild(closeButton);
+  try {
+    // Position popup near the cursor but not under it
+    const x = movement.endPosition ? movement.endPosition.x : movement.position.x;
+    const y = movement.endPosition ? movement.endPosition.y : movement.position.y;
+    
+    // For touch devices, position popup above the touch point
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const offsetX = isTouchDevice ? -140 : 20;
+    const offsetY = isTouchDevice ? -200 : 20;
+    
+    trackPopupElement.style.left = `${x + offsetX}px`;
+    trackPopupElement.style.top = `${y + offsetY}px`;
+    
+    // Populate popup content
+    let content = `
+      <div class="track-popup-title">${trackData.name || 'Track Segment'}</div>
+      <div class="track-popup-content">
+    `;
+    
+    // Add track properties
+    if (trackData.speed !== undefined) {
+      const speedUnit = settings.speedUnits === 'mph' ? 'mph' : 'km/h';
+      const speedValue = settings.speedUnits === 'mph' ? trackData.speed : trackData.speed * 1.60934;
+      content += `
+        <div class="track-popup-item">
+          <div class="track-popup-color" style="background-color: ${trackData.color || '#ccc'}"></div>
+          <div class="track-popup-name">Speed</div>
+          <div class="track-popup-value">${speedValue.toFixed(1)} ${speedUnit}</div>
+        </div>
+      `;
+    }
+    
+    if (trackData.elevation !== undefined) {
+      content += `
+        <div class="track-popup-item">
+          <div class="track-popup-name">Elevation</div>
+          <div class="track-popup-value">${trackData.elevation.toFixed(1)} m</div>
+        </div>
+      `;
+    }
+    
+    if (trackData.time !== undefined) {
+      content += `
+        <div class="track-popup-item">
+          <div class="track-popup-name">Time</div>
+          <div class="track-popup-value">${formatTime(trackData.time)}</div>
+        </div>
+      `;
+    }
+    
+    content += '</div>';
+    
+    // For touch devices, add a close button
+    if (isTouchDevice) {
+      content += '<button class="popup-close-button">Close</button>';
+    }
+    
+    // Update popup content
+    trackPopupElement.innerHTML = content;
+    
+    // Add event listener to close button if it exists
+    const closeButton = trackPopupElement.querySelector('.popup-close-button');
+    if (closeButton) {
+      closeButton.addEventListener('click', hideTrackPopup);
+    }
+    
+    // Show popup
+    trackPopupElement.style.display = 'block';
+    
+    // Ensure popup is within viewport bounds
+    const rect = trackPopupElement.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    if (rect.right > viewportWidth) {
+      trackPopupElement.style.left = `${viewportWidth - rect.width - 10}px`;
+    }
+    
+    if (rect.bottom > viewportHeight) {
+      trackPopupElement.style.top = `${viewportHeight - rect.height - 10}px`;
+    }
+    
+    if (rect.left < 0) {
+      trackPopupElement.style.left = '10px';
+    }
+    
+    if (rect.top < 0) {
+      trackPopupElement.style.top = '10px';
+    }
+  } catch (error) {
+    console.error('Error showing track popup:', error);
   }
 }
 
@@ -472,481 +529,270 @@ function hideTrackPopup() {
   }
 }
 
-// Handle file loading
-function handleFileLoad() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.multiple = true;
-  input.accept = '.kml,.kmz';
-  
-  input.onchange = async (e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    
-    progressBarElement.style.display = 'block';
-    progressBarFillElement.style.width = '0%';
-    progressBarFillElement.textContent = '0%';
-    
-    let loadedCount = 0;
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      fileInfoElement.textContent = `Loading ${file.name}...`;
-      
-      try {
-        const content = await readFileContent(file);
-        const kmlData = new KMLData(content, file.name);
-        kmlDataList.push(kmlData);
-        
-        loadedCount++;
-        const progress = Math.round((loadedCount / files.length) * 100);
-        progressBarFillElement.style.width = `${progress}%`;
-        progressBarFillElement.textContent = `${progress}%`;
-        
-        addTrackToggle(kmlData, kmlDataList.length - 1);
-      } catch (error) {
-        console.error(`Error loading ${file.name}:`, error);
-        fileInfoElement.textContent = `Error loading ${file.name}`;
-      }
-    }
-    
-    if (loadedCount > 0) {
-      fileInfoElement.textContent = `Loaded ${loadedCount} file(s)`;
-      updateColorMode();
-      showAllTracks();
-    }
-    
-    setTimeout(() => {
-      progressBarElement.style.display = 'none';
-    }, 2000);
-  };
-  
-  input.click();
+// Format time in MM:SS format
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Handle interpolation of KML data
-function handleInterpolateData() {
-  if (!kmlDataList.length) {
-    fileInfoElement.textContent = "No KML data loaded to interpolate";
-    return;
+// Update legend based on current settings
+function updateLegend() {
+  if (!legendGradientElement || !legendLabelsElement) return;
+  
+  try {
+    // Clear existing content
+    legendGradientElement.innerHTML = '';
+    legendLabelsElement.innerHTML = '';
+    
+    // Set up gradient based on color mode
+    let gradient = '';
+    let min = settings.legendMin;
+    let max = settings.legendMax;
+    let unit = '';
+    
+    switch (settings.colorMode) {
+      case 'speed':
+        gradient = 'linear-gradient(to top, blue, cyan, green, yellow, red)';
+        unit = settings.speedUnits === 'mph' ? 'mph' : 'km/h';
+        break;
+      case 'acceleration':
+        gradient = 'linear-gradient(to top, purple, blue, green, yellow, red)';
+        unit = 'm/s²';
+        break;
+      case 'timeDifference':
+        gradient = 'linear-gradient(to top, green, yellow, red)';
+        unit = 's';
+        break;
+      case 'lostTime':
+        gradient = 'linear-gradient(to top, green, yellow, red)';
+        unit = 's';
+        break;
+      default:
+        return; // No legend for 'noColor' mode
+    }
+    
+    // Set gradient background
+    legendGradientElement.style.background = gradient;
+    
+    // Add labels
+    const steps = 5;
+    for (let i = 0; i <= steps; i++) {
+      const value = min + (max - min) * (i / steps);
+      const label = document.createElement('div');
+      label.className = 'legend-label';
+      label.textContent = `${value.toFixed(0)} ${unit}`;
+      label.style.bottom = `${(i / steps) * 100}%`;
+      legendLabelsElement.appendChild(label);
+    }
+    
+    console.log('Legend updated');
+  } catch (error) {
+    console.error('Error updating legend:', error);
   }
-  
-  fileInfoElement.textContent = "Interpolating data...";
-  progressBarElement.style.display = 'block';
-  progressBarFillElement.style.width = '0%';
-  progressBarFillElement.textContent = '0%';
-  
-  setTimeout(() => {
-    try {
-      if (typeof stopAnimation === 'function') {
-        stopAnimation();
-      }
-      
-      resetFlags();
-      
-      let interpolatedCount = 0;
-      const totalTracks = kmlDataList.length;
-      
-      for (let i = 0; i < kmlDataList.length; i++) {
-        const kd = kmlDataList[i];
-        if (!kd.isInterpolated) {
-          if (kd.interpolateData()) {
-            interpolatedCount++;
-          }
+}
+
+// Setup animation controls
+function setupAnimationControls() {
+  try {
+    // Play button
+    const playBtn = document.getElementById('playAnimation');
+    if (playBtn) {
+      playBtn.addEventListener('click', () => {
+        if (typeof startAnimation === 'function') {
+          startAnimation();
         }
-        
-        const progress = Math.round(((i + 1) / totalTracks) * 100);
-        progressBarFillElement.style.width = `${progress}%`;
-        progressBarFillElement.textContent = `${progress}%`;
-      }
-      
-      if (interpolatedCount > 0) {
-        updateColorMode();
-        fileInfoElement.textContent = `Interpolated ${interpolatedCount} track(s)`;
-      } else {
-        fileInfoElement.textContent = "All tracks already interpolated";
-      }
-    } catch (error) {
-      console.error("Error during interpolation:", error);
-      fileInfoElement.textContent = "Error during interpolation";
+      });
     }
     
-    setTimeout(() => {
-      progressBarElement.style.display = 'none';
-    }, 2000);
-  }, 100);
-}
-
-// Read file content
-async function readFileContent(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result);
-    reader.onerror = (e) => reject(e);
-    reader.readAsText(file);
-  });
-}
-
-// Add track toggle to UI
-function addTrackToggle(kmlData, index) {
-  if (!trackTogglesElement) return;
-  
-  const trackToggle = document.createElement('div');
-  trackToggle.className = 'track-toggle';
-  trackToggle.dataset.index = index;
-  
-  const checkbox = document.createElement('input');
-  checkbox.type = 'checkbox';
-  checkbox.className = 'track-visibility-toggle';
-  checkbox.checked = kmlData.visible;
-  checkbox.addEventListener('change', (e) => {
-    kmlData.visible = e.target.checked;
-    kmlData.updateVisibility();
-  });
-  
-  const colorBox = document.createElement('div');
-  colorBox.className = 'color-box';
-  colorBox.style.backgroundColor = kmlData.color.toCssColorString();
-  
-  const trackName = document.createElement('div');
-  trackName.className = 'track-name';
-  trackName.textContent = kmlData.name || `Track ${index + 1}`;
-  
-  const removeButton = document.createElement('span');
-  removeButton.className = 'remove-track';
-  removeButton.textContent = '×';
-  removeButton.title = 'Remove track';
-  removeButton.addEventListener('click', () => {
-    removeTrack(index);
-  });
-  
-  trackToggle.appendChild(checkbox);
-  trackToggle.appendChild(colorBox);
-  trackToggle.appendChild(trackName);
-  trackToggle.appendChild(removeButton);
-  
-  trackTogglesElement.appendChild(trackToggle);
-}
-
-// Remove track
-function removeTrack(index) {
-  if (index < 0 || index >= kmlDataList.length) return;
-  
-  const kd = kmlDataList[index];
-  kd.removeFromViewer();
-  
-  kmlDataList.splice(index, 1);
-  
-  // Update track toggles
-  updateTrackToggles();
-  
-  // Update color mode
-  updateColorMode();
-}
-
-// Update track toggles
-function updateTrackToggles() {
-  if (!trackTogglesElement) return;
-  
-  trackTogglesElement.innerHTML = '';
-  
-  for (let i = 0; i < kmlDataList.length; i++) {
-    addTrackToggle(kmlDataList[i], i);
+    // Pause button
+    const pauseBtn = document.getElementById('pauseAnimation');
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', () => {
+        if (typeof pauseAnimation === 'function') {
+          pauseAnimation();
+        }
+      });
+    }
+    
+    // Reset to sync point button
+    const resetToSyncBtn = document.getElementById('resetToSyncPoint');
+    if (resetToSyncBtn) {
+      resetToSyncBtn.addEventListener('click', () => {
+        if (typeof resetToSyncPoint === 'function') {
+          resetToSyncPoint();
+        }
+      });
+    }
+    
+    // Timeline slider
+    if (timelineSliderElement) {
+      // For better cross-browser compatibility, use both input and change events
+      ['input', 'change'].forEach(eventType => {
+        timelineSliderElement.addEventListener(eventType, () => {
+          if (typeof setAnimationTime === 'function') {
+            const time = parseFloat(timelineSliderElement.value);
+            setAnimationTime(time);
+          }
+        });
+      });
+    }
+    
+    // Speed slider
+    if (speedSliderElement) {
+      // For better cross-browser compatibility, use both input and change events
+      ['input', 'change'].forEach(eventType => {
+        speedSliderElement.addEventListener(eventType, () => {
+          if (typeof setAnimationSpeed === 'function') {
+            const speed = parseFloat(speedSliderElement.value);
+            setAnimationSpeed(speed);
+            if (speedValueElement) {
+              speedValueElement.textContent = `${speed.toFixed(2)}x`;
+            }
+          }
+        });
+      });
+    }
+    
+    console.log('Animation controls set up');
+  } catch (error) {
+    console.error('Error setting up animation controls:', error);
   }
 }
 
-// Reset view
+// Reset view to default position
 function resetView() {
-  if (!viewer) return;
-  
-  viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(-95, 40, 10000000),
-    duration: 1.5
-  });
+  if (viewer && viewer.camera) {
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(-95.0, 40.0, 10000000.0),
+      duration: 1.5
+    });
+  }
 }
 
-// Top down view
-function topDownView() {
-  if (!viewer) return;
-  
-  viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(-95, 40, 10000000),
-    orientation: {
-      heading: 0,
-      pitch: -Cesium.Math.PI_OVER_TWO,
-      roll: 0
-    },
-    duration: 1.5
-  });
+// Set top-down view
+function setTopDownView() {
+  if (viewer && viewer.camera) {
+    const center = viewer.camera.positionCartographic;
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromRadians(center.longitude, center.latitude, center.height),
+      orientation: {
+        heading: 0.0,
+        pitch: -Cesium.Math.PI_OVER_TWO,
+        roll: 0.0
+      },
+      duration: 1.5
+    });
+  }
 }
 
 // Show all tracks
 function showAllTracks() {
-  if (!viewer || !kmlDataList.length) return;
+  if (!viewer || kmlDataList.length === 0) return;
   
-  const rectangle = Cesium.Rectangle.fromDegrees(-180, -90, 180, 90);
-  
-  for (const kd of kmlDataList) {
-    if (kd.visible && kd.coordinates && kd.coordinates.length > 0) {
-      for (const coord of kd.coordinates) {
-        const lon = coord[0];
-        const lat = coord[1];
-        
-        if (lon < rectangle.west) rectangle.west = lon;
-        if (lon > rectangle.east) rectangle.east = lon;
-        if (lat < rectangle.south) rectangle.south = lat;
-        if (lat > rectangle.north) rectangle.north = lat;
-      }
-    }
-  }
-  
-  // Add padding
-  const padding = 0.1;
-  rectangle.west -= padding;
-  rectangle.east += padding;
-  rectangle.south -= padding;
-  rectangle.north += padding;
-  
-  viewer.camera.flyTo({
-    destination: rectangle,
-    duration: 1.5
-  });
-}
-
-// Update color mode
-function updateColorMode() {
-  const noColorRadio = document.getElementById('noColorRadio');
-  const speedRadio = document.getElementById('speedRadio');
-  const accelRadio = document.getElementById('accelRadio');
-  const timeDiffRadio = document.getElementById('timeDiffRadio');
-  const lostTimeRadio = document.getElementById('lostTimeRadio');
-  const continuousColors = document.getElementById('continuousColors');
-  
-  if (noColorRadio.checked) {
-    settings.colorMode = 'noColor';
-  } else if (speedRadio.checked) {
-    settings.colorMode = 'speed';
-  } else if (accelRadio.checked) {
-    settings.colorMode = 'acceleration';
-  } else if (timeDiffRadio.checked) {
-    settings.colorMode = 'timeDifference';
-  } else if (lostTimeRadio.checked) {
-    settings.colorMode = 'lostTime';
-  }
-  
-  settings.continuousColors = continuousColors.checked;
-  
-  // Update legend
-  updateLegend();
-  
-  // Update track colors
-  for (const kd of kmlDataList) {
-    kd.updateColors(settings.colorMode, settings.continuousColors, settings.legendMin, settings.legendMax);
-  }
-}
-
-// Toggle units
-function toggleUnits() {
-  settings.speedUnits = unitToggleElement.checked ? 'kph' : 'mph';
-  unitLabelElement.textContent = settings.speedUnits === 'mph' ? 'MPH' : 'KPH';
-  
-  // Update legend if in speed mode
-  if (settings.colorMode === 'speed') {
-    updateLegend();
+  try {
+    // Create a rectangle that encompasses all tracks
+    let west = Infinity;
+    let south = Infinity;
+    let east = -Infinity;
+    let north = -Infinity;
     
-    // Update track colors
-    for (const kd of kmlDataList) {
-      kd.updateColors(settings.colorMode, settings.continuousColors, settings.legendMin, settings.legendMax);
-    }
-  }
-}
-
-// Update legend
-function updateLegend() {
-  if (!legendGradientElement || !legendLabelsElement) return;
-  
-  legendGradientElement.innerHTML = '';
-  legendLabelsElement.innerHTML = '';
-  
-  const colorScale = colorScales[settings.colorMode];
-  if (!colorScale) return;
-  
-  // Create gradient
-  let gradientStyle = 'linear-gradient(to bottom, ';
-  for (let i = 0; i < colorScale.length; i++) {
-    const color = colorScale[i].color;
-    const position = colorScale[i].position * 100;
-    gradientStyle += `rgba(${color[0]}, ${color[1]}, ${color[2]}, 1) ${position}%`;
-    if (i < colorScale.length - 1) {
-      gradientStyle += ', ';
-    }
-  }
-  gradientStyle += ')';
-  
-  legendGradientElement.style.background = gradientStyle;
-  
-  // Create labels
-  const numLabels = 5;
-  for (let i = 0; i < numLabels; i++) {
-    const position = i / (numLabels - 1);
-    const value = settings.legendMin + position * (settings.legendMax - settings.legendMin);
-    
-    const label = document.createElement('div');
-    label.className = 'legend-label';
-    
-    let displayValue = value;
-    let unit = '';
-    
-    if (settings.colorMode === 'speed') {
-      unit = settings.speedUnits === 'mph' ? ' mph' : ' kph';
-    } else if (settings.colorMode === 'acceleration') {
-      unit = ' m/s²';
-    } else if (settings.colorMode === 'timeDifference' || settings.colorMode === 'lostTime') {
-      unit = ' s';
-    }
-    
-    label.textContent = displayValue.toFixed(1) + unit;
-    label.style.bottom = `${position * 100}%`;
-    
-    label.addEventListener('click', () => {
-      if (i === 0) {
-        const newMin = prompt('Enter new minimum value:', settings.legendMin);
-        if (newMin !== null && !isNaN(newMin)) {
-          settings.legendMin = parseFloat(newMin);
-          updateLegend();
-          updateColorMode();
-        }
-      } else if (i === numLabels - 1) {
-        const newMax = prompt('Enter new maximum value:', settings.legendMax);
-        if (newMax !== null && !isNaN(newMax)) {
-          settings.legendMax = parseFloat(newMax);
-          updateLegend();
-          updateColorMode();
-        }
+    // Find bounds of all tracks
+    kmlDataList.forEach(kmlData => {
+      if (kmlData.bounds) {
+        west = Math.min(west, kmlData.bounds.west);
+        south = Math.min(south, kmlData.bounds.south);
+        east = Math.max(east, kmlData.bounds.east);
+        north = Math.max(north, kmlData.bounds.north);
       }
     });
     
-    legendLabelsElement.appendChild(label);
-  }
-}
-
-// Color scales for different modes
-const colorScales = {
-  speed: [
-    { position: 0.0, color: [0, 0, 255] },    // Blue
-    { position: 0.5, color: [0, 255, 0] },    // Green
-    { position: 1.0, color: [255, 0, 0] }     // Red
-  ],
-  acceleration: [
-    { position: 0.0, color: [255, 0, 0] },    // Red (negative acceleration)
-    { position: 0.5, color: [255, 255, 255] }, // White (zero acceleration)
-    { position: 1.0, color: [0, 255, 0] }     // Green (positive acceleration)
-  ],
-  timeDifference: [
-    { position: 0.0, color: [0, 255, 0] },    // Green (small difference)
-    { position: 0.5, color: [255, 255, 0] },  // Yellow
-    { position: 1.0, color: [255, 0, 0] }     // Red (large difference)
-  ],
-  lostTime: [
-    { position: 0.0, color: [0, 255, 0] },    // Green (gaining time)
-    { position: 0.5, color: [255, 255, 255] }, // White (neutral)
-    { position: 1.0, color: [255, 0, 0] }     // Red (losing time)
-  ]
-};
-
-// Interpolate color
-function interpolateColor(colorScale, value) {
-  if (value <= 0) {
-    return new Cesium.Color(
-      colorScale[0].color[0] / 255,
-      colorScale[0].color[1] / 255,
-      colorScale[0].color[2] / 255,
-      1
-    );
-  }
-  
-  if (value >= 1) {
-    return new Cesium.Color(
-      colorScale[colorScale.length - 1].color[0] / 255,
-      colorScale[colorScale.length - 1].color[1] / 255,
-      colorScale[colorScale.length - 1].color[2] / 255,
-      1
-    );
-  }
-  
-  for (let i = 0; i < colorScale.length - 1; i++) {
-    if (value >= colorScale[i].position && value <= colorScale[i + 1].position) {
-      const t = (value - colorScale[i].position) / (colorScale[i + 1].position - colorScale[i].position);
-      
-      const r = colorScale[i].color[0] + t * (colorScale[i + 1].color[0] - colorScale[i].color[0]);
-      const g = colorScale[i].color[1] + t * (colorScale[i + 1].color[1] - colorScale[i].color[1]);
-      const b = colorScale[i].color[2] + t * (colorScale[i + 1].color[2] - colorScale[i].color[2]);
-      
-      return new Cesium.Color(r / 255, g / 255, b / 255, 1);
+    // If we have valid bounds, fly to them
+    if (west !== Infinity && south !== Infinity && east !== -Infinity && north !== -Infinity) {
+      const rectangle = Cesium.Rectangle.fromDegrees(west, south, east, north);
+      viewer.camera.flyTo({
+        destination: rectangle,
+        duration: 1.5,
+        complete: function() {
+          // Add some padding
+          viewer.camera.zoomOut(viewer.camera.getMagnitude() * 0.2);
+        }
+      });
+    } else {
+      // If no bounds, reset to default view
+      resetView();
     }
+  } catch (error) {
+    console.error('Error showing all tracks:', error);
   }
+}
+
+// Handle KML file loading
+function handleKmlFiles(files) {
+  // Implementation would go here
+  console.log('KML files selected:', files.length);
+}
+
+// Interpolate track data
+function interpolateTrackData() {
+  // Implementation would go here
+  console.log('Interpolating track data');
+}
+
+// Update track colors based on current settings
+function updateTrackColors() {
+  // Implementation would go here
+  console.log('Updating track colors');
+}
+
+// Detect browser and apply specific fixes if needed
+function applyBrowserSpecificFixes() {
+  // Detect Safari
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
   
-  return new Cesium.Color(1, 1, 1, 1);
-}
-
-// Format time
-function formatTime(seconds) {
-  const minutes = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
-// Animation functions
-function startAnimation() {
-  if (typeof startAnimationPlayback === 'function') {
-    startAnimationPlayback();
-  }
-}
-
-function stopAnimation() {
-  if (typeof stopAnimationPlayback === 'function') {
-    stopAnimationPlayback();
-  }
-}
-
-function resetAnimation() {
-  if (typeof resetAnimationToSyncPoint === 'function') {
-    resetAnimationToSyncPoint();
-  }
-}
-
-function updateAnimationSpeed(e) {
-  if (typeof setAnimationSpeed === 'function') {
-    const speed = parseFloat(e.target.value);
-    setAnimationSpeed(speed);
+  // Detect iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  
+  // Detect Edge
+  const isEdge = /Edge\/\d./i.test(navigator.userAgent);
+  
+  // Apply Safari-specific fixes
+  if (isSafari) {
+    // Fix for Safari's handling of position: fixed elements
+    document.documentElement.classList.add('safari');
     
-    if (speedValueElement) {
-      speedValueElement.textContent = speed.toFixed(2) + 'x';
-    }
+    // Fix for Safari's handling of range inputs
+    const rangeInputs = document.querySelectorAll('input[type="range"]');
+    rangeInputs.forEach(input => {
+      input.classList.add('safari-range');
+    });
+  }
+  
+  // Apply iOS-specific fixes
+  if (isIOS) {
+    // Fix for iOS momentum scrolling
+    document.documentElement.classList.add('ios');
+    
+    // Fix for iOS input focusing
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.addEventListener('touchstart', function(e) {
+        e.stopPropagation();
+      });
+    });
+  }
+  
+  // Apply Edge-specific fixes
+  if (isEdge) {
+    // Fix for Edge's handling of flexbox
+    document.documentElement.classList.add('edge');
   }
 }
 
-function updateTimelinePosition(e) {
-  if (typeof setAnimationPosition === 'function') {
-    const position = parseFloat(e.target.value) / 100;
-    setAnimationPosition(position);
-  }
-}
+// Call browser-specific fixes
+applyBrowserSpecificFixes();
 
-// Flag functions
-function placeFlag(isStart) {
-  if (typeof placeFlagOnMap === 'function') {
-    placeFlagOnMap(isStart);
-  }
-}
-
-function resetFlags() {
-  if (typeof resetAllFlags === 'function') {
-    resetAllFlags();
-  }
-}
-
-// Initialize flag drag/drop
-function initFlagDragDrop() {
-  // This function is implemented in animation_flags.js
-  // The actual implementation will be modified there
-}
+// Export functions for use in other modules
+window.resetView = resetView;
+window.setTopDownView = setTopDownView;
+window.showAllTracks = showAllTracks;

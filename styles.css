@@ -293,10 +293,11 @@ input[type="range"]:focus {
   margin-right: 8px; /* Increased margin */
 }
 
+/* Completely repositioned flag container to avoid legend overlap */
 .flag-container {
   position: absolute;
-  bottom: 120px; /* Increased to avoid overlap with bottom panel */
-  right: 20px;
+  bottom: 200px; /* Increased distance from bottom */
+  left: 20px; /* Moved to left side instead of right */
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -658,12 +659,6 @@ input:checked + .toggle-slider:before {
     width: 90%;
     max-width: 800px;
   }
-  
-  /* Adjust flag container to avoid legend overlap */
-  .flag-container {
-    bottom: 150px;
-    right: 20px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -733,12 +728,6 @@ input:checked + .toggle-slider:before {
     width: 100%;
     margin: 5px 0;
   }
-  
-  /* Adjust flag container position */
-  .flag-container {
-    bottom: 150px; /* Ensure it's above the bottom panel */
-    right: 10px;
-  }
 }
 
 /* Orientation-specific adjustments */
@@ -749,10 +738,10 @@ input:checked + .toggle-slider:before {
     bottom: 0; /* Ensure it's at the bottom */
   }
   
-  /* Move flags to avoid legend overlap in portrait mode */
+  /* Keep flags on left side in portrait mode */
   .flag-container {
-    bottom: 150px;
-    right: 10px;
+    bottom: 200px;
+    left: 20px;
   }
 }
 
@@ -763,12 +752,11 @@ input:checked + .toggle-slider:before {
     bottom: 0; /* Ensure it's at the bottom */
   }
   
-  /* Move flags to side in landscape mode */
+  /* Move flags to top left in landscape mode */
   .flag-container {
     bottom: auto;
-    top: 50%;
-    transform: translateY(-50%);
-    right: 10px;
+    top: 100px;
+    left: 20px;
   }
 }
 

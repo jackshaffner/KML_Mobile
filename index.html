@@ -118,6 +118,17 @@
   </div>
 
   <!-- Our JavaScript modules -->
+  <script>
+    // Ensure Cesium token is set before any other scripts load
+    window.onload = function() {
+      if (typeof Cesium !== 'undefined') {
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyOGI0NzRjZC04MWMyLTRiYmEtOTdkZS05MmM2YTNlOTkwODciLCJpZCI6MjkzMDE4LCJpYXQiOjE3NDQzMzg4Mjh9.goakCTnXpFoxeFNE0DBWyChHYW9nKrXOVPaNY5UjJAo';
+        console.log('Cesium token set successfully');
+      } else {
+        console.error('Cesium library not loaded properly');
+      }
+    };
+  </script>
   <script src="kml_data.js"></script>
   <script src="animation_flags.js"></script>
   <script src="main.js"></script>
@@ -125,9 +136,6 @@
   <!-- Panel toggle script for mobile/tablet -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Touch detection
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      
       // Get panel elements
       const leftPanel = document.getElementById('leftPanel');
       const rightPanel = document.getElementById('rightPanel');
@@ -168,7 +176,7 @@
       });
       
       // Add touch-specific event listeners
-      if (isTouchDevice) {
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         // Add swipe detection for panels
         let touchStartX = 0;
         let touchEndX = 0;
