@@ -1,0 +1,776 @@
+/* Reset all margins and paddings to ensure proper sizing */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100vh; /* Use viewport height instead of percentage */
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  position: relative; /* Ensure positioning context */
+}
+
+/* Cesium container must fill the entire viewport */
+#cesiumContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh; /* Use viewport height instead of percentage */
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* Ensure the Cesium canvas fills the container */
+.cesium-widget, 
+.cesium-widget canvas {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+}
+
+.panel {
+  position: absolute;
+  background-color: rgba(255,255,255,0.8);
+  border-radius: 5px;
+  padding: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  z-index: 1;
+  max-height: 90vh; /* Limit height on small screens */
+  overflow-y: auto; /* Allow scrolling for content that doesn't fit */
+}
+
+.left-panel {
+  top: 10px;
+  left: 10px;
+  width: 250px;
+}
+
+.right-panel {
+  top: 10px;
+  right: 10px;
+  width: 200px;
+}
+
+.bottom-panel {
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  padding: 15px;
+  text-align: center;
+}
+
+/* Panel toggle buttons for mobile/tablet */
+.panel-toggle {
+  display: none;
+  position: absolute;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(255,255,255,0.9);
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  text-align: center;
+  line-height: 40px;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.left-panel-toggle {
+  top: 10px;
+  left: 10px;
+}
+
+.right-panel-toggle {
+  top: 10px;
+  right: 10px;
+}
+
+.bottom-panel-toggle {
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 16px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 5px;
+}
+
+button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px; /* Increased padding for touch targets */
+  margin: 5px 0;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 16px; /* Increased font size for readability */
+  width: 100%;
+  min-height: 44px; /* Minimum height for touch targets */
+}
+
+button:hover, button:active {
+  background-color: #45a049;
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background-color: #ccc;
+  margin: 10px 0;
+}
+
+.track-toggle {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+  flex-wrap: wrap;
+  min-height: 44px; /* Minimum height for touch targets */
+}
+
+.color-box {
+  width: 20px; /* Increased size for touch */
+  height: 20px; /* Increased size for touch */
+  margin: 0 5px;
+  border: 1px solid #000;
+}
+
+.track-name {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 5px;
+}
+
+.track-visibility-toggle {
+  margin-right: 5px;
+  cursor: pointer;
+  width: 20px; /* Increased size for touch */
+  height: 20px; /* Increased size for touch */
+}
+
+.elevation-control {
+  display: flex;
+  align-items: center;
+  margin-right: 5px;
+}
+
+.elevation-label {
+  font-size: 14px; /* Increased font size */
+  margin-right: 3px;
+}
+
+.elevation-input {
+  width: 60px; /* Increased width for touch */
+  font-size: 14px; /* Increased font size */
+  padding: 5px; /* Increased padding */
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.remove-track {
+  color: red;
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 5px;
+  font-size: 20px; /* Increased size for touch */
+  padding: 5px; /* Increased padding for touch */
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+.controls button {
+  width: auto;
+  margin: 5px;
+  min-width: 80px; /* Ensure buttons are wide enough for touch */
+}
+
+.timeline {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.timeline-slider {
+  flex-grow: 1;
+  margin: 0 10px;
+  height: 30px; /* Increased height for touch */
+}
+
+/* Make range inputs more touch-friendly */
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 30px;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 30px;
+  width: 30px;
+  border-radius: 50%;
+  background: #4CAF50;
+  cursor: pointer;
+  margin-top: -10px;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 10px;
+  cursor: pointer;
+  background: #ddd;
+  border-radius: 5px;
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+.legend-container {
+  display: flex;
+  height: 200px;
+  margin-top: 10px;
+  position: relative;
+}
+
+.legend-gradient {
+  width: 30px;
+  height: 100%;
+  margin-right: 15px;
+  border: 1px solid #ccc;
+}
+
+.legend-labels {
+  flex: 1;
+  position: relative;
+}
+
+.legend-label {
+  font-size: 14px; /* Increased font size */
+  cursor: pointer;
+  position: absolute;
+  white-space: nowrap;
+  padding: 3px; /* Added padding for touch */
+}
+
+.settings-group {
+  margin-bottom: 10px;
+}
+
+.settings-group label {
+  display: block;
+  margin: 8px 0; /* Increased margin */
+  min-height: 44px; /* Minimum height for touch targets */
+  display: flex;
+  align-items: center;
+}
+
+.settings-group input[type="radio"],
+.settings-group input[type="checkbox"] {
+  width: 20px; /* Increased size for touch */
+  height: 20px; /* Increased size for touch */
+  margin-right: 8px; /* Increased margin */
+}
+
+.flag-container {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* [FIX] Ensure flags are clickable/draggable on top of the map */
+.flag-icon {
+  width: 80px; /* Increased size for touch */
+  height: 80px; /* Increased size for touch */
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 10px;
+  cursor: move;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  background-color: transparent;
+  pointer-events: auto; /* [FIX ADDED] allow clicks/drags */
+  z-index: 9999;        /* [FIX ADDED] ensure flags are above other elements */
+}
+
+/* Start arch styling */
+.start-arch {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.start-arch:before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 5px;
+  width: 70px; /* Increased size */
+  height: 45px; /* Increased size */
+  border: 5px solid #0057B7;
+  border-bottom: none;
+  border-radius: 35px 35px 0 0;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.start-arch:after {
+  content: "";
+  position: absolute;
+  bottom: 10px;
+  left: 5px;
+  width: 70px; /* Increased size */
+  height: 5px;
+  background-color: #333333;
+}
+
+.start-flag .start-arch {
+  color: white;
+  font-weight: bold;
+  font-size: 14px; /* Increased font size */
+  text-shadow: 0 0 3px black;
+  z-index: 1;
+}
+
+/* Finish arch styling */
+.finish-arch {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.finish-arch:before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 5px;
+  width: 70px; /* Increased size */
+  height: 45px; /* Increased size */
+  border: 5px solid transparent;
+  border-bottom: none;
+  border-radius: 35px 35px 0 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    black,
+    black 5px,
+    white 5px,
+    white 10px
+  );
+  background-clip: border-box;
+  -webkit-background-clip: border-box;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.finish-arch:after {
+  content: "";
+  position: absolute;
+  bottom: 10px;
+  left: 5px;
+  width: 70px; /* Increased size */
+  height: 5px;
+  background-color: #333333;
+}
+
+.finish-arch .checkered-line {
+  position: absolute;
+  bottom: 15px;
+  left: 5px;
+  width: 70px; /* Increased size */
+  height: 5px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    black,
+    black 5px,
+    white 5px,
+    white 10px
+  );
+}
+
+/* New styles for the temporary dragging flag */
+.temp-flag {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  transform: scale(0.7); /* Smaller size while dragging */
+}
+
+/* Ghost effect for deployed flags */
+.flag-deployed {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: scale(0.9);
+}
+
+/* Reset flags button styling */
+.reset-flags-button {
+  width: 80%;
+  margin-top: 5px;
+  background-color: #F44336;
+  min-height: 44px; /* Minimum height for touch targets */
+}
+
+.reset-flags-button:hover, .reset-flags-button:active {
+  background-color: #d32f2f;
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.speed-control input {
+  flex-grow: 1;
+  margin: 0 10px;
+  height: 30px; /* Increased height for touch */
+}
+
+#fileInfo {
+  font-size: 14px; /* Increased font size */
+  color: #666;
+  margin-top: 5px;
+  min-height: 20px; /* Increased height */
+}
+
+#progressBar {
+  width: 100%;
+  background-color: #ddd;
+  margin-top: 10px;
+  display: none;
+  height: 30px; /* Increased height */
+}
+
+#progressBarFill {
+  height: 30px; /* Increased height */
+  background-color: #4CAF50;
+  width: 0%;
+  text-align: center;
+  line-height: 30px; /* Increased line height */
+  color: white;
+  font-size: 14px; /* Increased font size */
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px; /* Increased width */
+  height: 26px; /* Increased height */
+  margin: 0 5px;
+  vertical-align: middle;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 26px; /* Match height */
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px; /* Increased size */
+  width: 20px; /* Increased size */
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #2196F3;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(24px); /* Adjusted for larger toggle */
+}
+
+.unit-labels {
+  display: inline;
+  font-size: 14px; /* Increased font size */
+  margin-left: 5px;
+}
+
+.speed-label-container {
+  display: flex;
+  align-items: center;
+}
+
+/* Animation for flag movement */
+@keyframes flagPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.flag-adjusting {
+  animation: flagPulse 0.5s ease-in-out 3;
+}
+
+/* Hide all Cesium watermarks and credits */
+.cesium-viewer-bottom,
+.cesium-viewer-timelineContainer,
+.cesium-viewer-animationContainer,
+.cesium-viewer-fullscreenContainer,
+.cesium-viewer-toolbar,
+.cesium-widget-credits,
+.cesium-credit-container,
+.cesium-credit-logoContainer,
+.cesium-credit-expand-link,
+.cesium-widget-errorPanel,
+.cesium-infoBox-container,
+.manus-branding {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Track segment hover popup styles */
+.track-popup {
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  padding: 12px; /* Increased padding */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  font-size: 14px; /* Increased font size */
+  max-width: 280px; /* Increased width */
+  display: none;
+  transition: opacity 0.2s ease;
+}
+
+/* Make popup interactive on touch devices */
+.popup-close-button {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.track-popup-title {
+  font-weight: bold;
+  margin-bottom: 8px; /* Increased margin */
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 5px;
+  font-size: 16px; /* Increased font size */
+}
+
+.track-popup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* Increased gap */
+}
+
+.track-popup-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px; /* Minimum height */
+}
+
+.track-popup-color {
+  width: 16px; /* Increased size */
+  height: 16px; /* Increased size */
+  border-radius: 3px;
+  margin-right: 10px; /* Increased margin */
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.track-popup-name {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px; /* Increased width */
+  font-size: 14px; /* Increased font size */
+}
+
+.track-popup-value {
+  font-weight: bold;
+  margin-left: 10px; /* Increased margin */
+  font-size: 14px; /* Increased font size */
+}
+
+/* Media queries for responsive design */
+@media (max-width: 1024px) {
+  .bottom-panel {
+    width: 90%;
+    max-width: 800px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Show panel toggle buttons */
+  .panel-toggle {
+    display: block;
+  }
+  
+  /* Hide panels by default */
+  .left-panel, .right-panel {
+    display: none;
+    width: 80%;
+    max-width: 300px;
+  }
+  
+  /* Left panel takes full height */
+  .left-panel {
+    top: 0;
+    left: 0;
+    height: 100%;
+    border-radius: 0;
+    border-right: 1px solid #ccc;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  /* Right panel takes full height */
+  .right-panel {
+    top: 0;
+    right: 0;
+    height: 100%;
+    border-radius: 0;
+    border-left: 1px solid #ccc;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+  
+  /* Bottom panel is smaller */
+  .bottom-panel {
+    width: 100%;
+    max-width: none;
+    border-radius: 0;
+    left: 0;
+    transform: none;
+    padding: 10px;
+  }
+  
+  /* When panels are active */
+  .left-panel.active {
+    display: block;
+    transform: translateX(0);
+  }
+  
+  .right-panel.active {
+    display: block;
+    transform: translateX(0);
+  }
+  
+  /* Adjust controls for smaller screens */
+  .controls {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .controls button {
+    width: 100%;
+    margin: 5px 0;
+  }
+  
+  /* Adjust flag container position */
+  .flag-container {
+    bottom: 120px;
+    right: 10px;
+  }
+}
+
+/* Orientation-specific adjustments */
+@media (orientation: portrait) {
+  .bottom-panel {
+    height: auto;
+    max-height: 30vh;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .bottom-panel {
+    height: auto;
+    max-height: 40vh;
+  }
+  
+  .flag-container {
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 10px;
+  }
+}
+
+/* Add panel toggle functionality via JavaScript */
+.panel-visible {
+  display: block !important;
+}
+
+/* Add overlay for when side panels are open */
+.panel-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 0;
+}
+
+.panel-overlay.active {
+  display: block;
+}

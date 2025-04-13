@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>KML Track Visualizer</title>
+
+  <!-- Cesium library -->
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.104/Build/Cesium/Cesium.js"></script>
+  
+  <!-- Our CSS styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+
+  <!-- Panel toggle buttons for mobile/tablet -->
+  <div class="panel-toggle left-panel-toggle" id="leftPanelToggle">≡</div>
+  <div class="panel-toggle right-panel-toggle" id="rightPanelToggle">≡</div>
+  
+  <!-- Panel overlay for mobile/tablet -->
+  <div class="panel-overlay" id="panelOverlay"></div>
+
+  <!-- Left panel -->
+  <div class="panel left-panel" id="leftPanel">
+    <h2>File Controls</h2>
+    <button id="loadKmlBtn">Load KML Files</button>
+    <button id="interpolateDataBtn">Interpolate Data</button>
+    <div id="fileInfo"></div>
+    <div id="progressBar">
+      <div id="progressBarFill">0%</div>
+    </div>
+    <hr />
+    <h2>View Controls</h2>
+    <button id="resetView">Reset View</button>
+    <button id="topDownView">Top Down View</button>
+    <button id="showAllBtn">Show All</button>
+    <hr />
+    <h2>Tracks</h2>
+    <div id="trackToggles"></div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="panel right-panel" id="rightPanel">
+    <h2>Legend</h2>
+    <div class="legend-container">
+      <div id="legendGradient" class="legend-gradient"></div>
+      <div id="legendLabels" class="legend-labels"></div>
+    </div>
+    <div class="settings-group">
+      <label>
+        <input type="radio" name="colorMode" id="noColorRadio" value="noColor" />
+        No Color
+      </label>
+      <label class="speed-label-container">
+        <span style="display: flex; align-items: center; width: 100%;">
+          <input type="radio" name="colorMode" id="speedRadio" value="speed" checked />
+          <span style="margin-left: 5px;">Speed</span>
+          <span style="display: flex; align-items: center; margin-left: auto;">
+            <label class="toggle-switch">
+              <input type="checkbox" id="unitToggle" />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="unit-labels" id="unitLabel">MPH/KPH</span>
+          </span>
+        </span>
+      </label>
+      <label>
+        <input type="radio" name="colorMode" id="accelRadio" value="acceleration" />
+        Acceleration
+      </label>
+      <label>
+        <input type="radio" name="colorMode" id="timeDiffRadio" value="timeDifference" />
+        Time Difference
+      </label>
+      <label>
+        <input type="radio" name="colorMode" id="lostTimeRadio" value="lostTime" />
+        Lost Time
+      </label>
+      <label>
+        <input type="checkbox" id="continuousColors" checked />
+        Continuous Colors
+      </label>
+    </div>
+  </div>
+
+  <!-- Bottom panel -->
+  <div class="panel bottom-panel" id="bottomPanel">
+    <div class="controls">
+      <button id="playAnimation">Play Animation</button>
+      <button id="pauseAnimation">Pause</button>
+      <button id="resetToSyncPoint">Reset to Sync Point</button>
+      <div class="speed-control">
+        Speed: <span id="speedValue">1.00x</span>
+        <input type="range" id="speedSlider" min="0.1" max="30" step="0.1" value="1" />
+      </div>
+    </div>
+    <div class="timeline">
+      <span id="start-time-label">00:00</span>
+      <input type="range" id="timelineSlider" class="timeline-slider" min="0" max="100" value="0" />
+      <span id="end-time-label">10:00</span>
+    </div>
+    <div style="text-align: center; margin-top: 5px;">
+      <span id="current-time-label">00:00</span>
+    </div>
+  </div>
+
+  <!-- Start/Finish icons (draggable) -->
+  <div class="flag-container">
+    <div class="flag-icon start-flag" id="startPointIcon">
+      <div class="start-arch">START</div>
+    </div>
+    <div class="flag-icon finish-flag" id="finishPointIcon">
+      <div class="finish-arch"><div class="checkered-line"></div></div>
+    </div>
+    <button id="resetFlagsBtn" class="reset-flags-button">Reset Flags</button>
+  </div>
+
+  <!-- Our JavaScript modules -->
+  <script src="kml_data.js"></script>
+  <script src="animation_flags.js"></script>
+  <script src="main.js"></script>
+  
+  <!-- Panel toggle script for mobile/tablet -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Touch detection
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      // Get panel elements
+      const leftPanel = document.getElementById('leftPanel');
+      const rightPanel = document.getElementById('rightPanel');
+      const leftToggle = document.getElementById('leftPanelToggle');
+      const rightToggle = document.getElementById('rightPanelToggle');
+      const overlay = document.getElementById('panelOverlay');
+      
+      // Function to toggle panel visibility
+      function togglePanel(panel) {
+        if (panel.classList.contains('active')) {
+          panel.classList.remove('active');
+          overlay.classList.remove('active');
+        } else {
+          // Close any open panels first
+          leftPanel.classList.remove('active');
+          rightPanel.classList.remove('active');
+          
+          // Open the selected panel
+          panel.classList.add('active');
+          overlay.classList.add('active');
+        }
+      }
+      
+      // Add event listeners for panel toggles
+      leftToggle.addEventListener('click', function() {
+        togglePanel(leftPanel);
+      });
+      
+      rightToggle.addEventListener('click', function() {
+        togglePanel(rightPanel);
+      });
+      
+      // Close panels when clicking overlay
+      overlay.addEventListener('click', function() {
+        leftPanel.classList.remove('active');
+        rightPanel.classList.remove('active');
+        overlay.classList.remove('active');
+      });
+      
+      // Add touch-specific event listeners
+      if (isTouchDevice) {
+        // Add swipe detection for panels
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        document.addEventListener('touchstart', function(e) {
+          touchStartX = e.changedTouches[0].screenX;
+        }, false);
+        
+        document.addEventListener('touchend', function(e) {
+          touchEndX = e.changedTouches[0].screenX;
+          handleSwipe();
+        }, false);
+        
+        function handleSwipe() {
+          const swipeThreshold = 100; // Minimum distance for swipe
+          
+          // Right to left swipe (open right panel)
+          if (touchEndX < touchStartX - swipeThreshold) {
+            if (!rightPanel.classList.contains('active')) {
+              togglePanel(rightPanel);
+            }
+          }
+          
+          // Left to right swipe (open left panel)
+          if (touchEndX > touchStartX + swipeThreshold) {
+            if (!leftPanel.classList.contains('active')) {
+              togglePanel(leftPanel);
+            }
+          }
+        }
+        
+        // Double tap to reset view
+        let lastTap = 0;
+        document.addEventListener('touchend', function(e) {
+          const currentTime = new Date().getTime();
+          const tapLength = currentTime - lastTap;
+          
+          // Double tap detected (within 500ms)
+          if (tapLength < 500 && tapLength > 0) {
+            // Check if tap is on the map (not on panels or controls)
+            if (!e.target.closest('.panel') && !e.target.closest('.flag-container')) {
+              // Reset view
+              if (typeof resetView === 'function') {
+                resetView();
+              }
+            }
+          }
+          
+          lastTap = currentTime;
+        });
+      }
+      
+      // Check screen size and initialize panel state
+      function initPanelState() {
+        if (window.innerWidth <= 768) {
+          // On small screens, start with panels closed
+          leftPanel.classList.remove('active');
+          rightPanel.classList.remove('active');
+          
+          // Show toggle buttons
+          leftToggle.style.display = 'block';
+          rightToggle.style.display = 'block';
+        } else {
+          // On larger screens, show panels and hide toggles
+          leftPanel.classList.add('panel-visible');
+          rightPanel.classList.add('panel-visible');
+          
+          leftToggle.style.display = 'none';
+          rightToggle.style.display = 'none';
+        }
+      }
+      
+      // Initialize panel state
+      initPanelState();
+      
+      // Update panel state on resize
+      window.addEventListener('resize', initPanelState);
+    });
+  </script>
+</body>
+</html>
