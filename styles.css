@@ -65,7 +65,8 @@ html, body {
   bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
-  width: 800px;
+  width: 90%;
+  max-width: 800px;
   padding: 15px;
   text-align: center;
 }
@@ -294,7 +295,7 @@ input[type="range"]:focus {
 
 .flag-container {
   position: absolute;
-  bottom: 80px;
+  bottom: 120px; /* Increased to avoid overlap with bottom panel */
   right: 20px;
   z-index: 10;
   display: flex;
@@ -482,11 +483,12 @@ input[type="range"]:focus {
   font-size: 14px; /* Increased font size */
 }
 
+/* Reduced size for MPH/KPH toggle */
 .toggle-switch {
   position: relative;
   display: inline-block;
-  width: 50px; /* Increased width */
-  height: 26px; /* Increased height */
+  width: 36px; /* Reduced width */
+  height: 20px; /* Reduced height */
   margin: 0 5px;
   vertical-align: middle;
 }
@@ -506,14 +508,14 @@ input[type="range"]:focus {
   bottom: 0;
   background-color: #ccc;
   transition: .4s;
-  border-radius: 26px; /* Match height */
+  border-radius: 20px; /* Match height */
 }
 
 .toggle-slider:before {
   position: absolute;
   content: "";
-  height: 20px; /* Increased size */
-  width: 20px; /* Increased size */
+  height: 14px; /* Reduced size */
+  width: 14px; /* Reduced size */
   left: 3px;
   bottom: 3px;
   background-color: white;
@@ -526,12 +528,12 @@ input:checked + .toggle-slider {
 }
 
 input:checked + .toggle-slider:before {
-  transform: translateX(24px); /* Adjusted for larger toggle */
+  transform: translateX(16px); /* Adjusted for smaller toggle */
 }
 
 .unit-labels {
   display: inline;
-  font-size: 14px; /* Increased font size */
+  font-size: 12px; /* Reduced font size */
   margin-left: 5px;
 }
 
@@ -656,6 +658,12 @@ input:checked + .toggle-slider:before {
     width: 90%;
     max-width: 800px;
   }
+  
+  /* Adjust flag container to avoid legend overlap */
+  .flag-container {
+    bottom: 150px;
+    right: 20px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -701,6 +709,7 @@ input:checked + .toggle-slider:before {
     left: 0;
     transform: none;
     padding: 10px;
+    bottom: 0; /* Ensure it's at the bottom */
   }
   
   /* When panels are active */
@@ -727,7 +736,7 @@ input:checked + .toggle-slider:before {
   
   /* Adjust flag container position */
   .flag-container {
-    bottom: 120px;
+    bottom: 150px; /* Ensure it's above the bottom panel */
     right: 10px;
   }
 }
@@ -737,6 +746,13 @@ input:checked + .toggle-slider:before {
   .bottom-panel {
     height: auto;
     max-height: 30vh;
+    bottom: 0; /* Ensure it's at the bottom */
+  }
+  
+  /* Move flags to avoid legend overlap in portrait mode */
+  .flag-container {
+    bottom: 150px;
+    right: 10px;
   }
 }
 
@@ -744,8 +760,10 @@ input:checked + .toggle-slider:before {
   .bottom-panel {
     height: auto;
     max-height: 40vh;
+    bottom: 0; /* Ensure it's at the bottom */
   }
   
+  /* Move flags to side in landscape mode */
   .flag-container {
     bottom: auto;
     top: 50%;
